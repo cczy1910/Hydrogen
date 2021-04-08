@@ -24,7 +24,7 @@ def readData(cs, file):
         line = data.T[i][:-1]
         config = Configuration(cs, values=dict(line))
         configs.append(config)
-        values[config] = 5000 - data.T[i][-1]
+        values[config] = data.T[i][-1]
     return values, configs
 
 
@@ -52,7 +52,8 @@ def getPrediction(config):
         min_y *= 1 - 10 ** -10
     pred = np.exp(pred)
     pred = pred * (rh2epm.max_y - min_y) + min_y
-    return -pred
+    return pred
+    # return 0
 
 
 if __name__ == '__main__':
@@ -62,9 +63,9 @@ if __name__ == '__main__':
     cs = ConfigurationSpace()
     starting_material_ID = CSH.CategoricalHyperparameter("starting_material_ID", choices=["S2", "S5"])
     fd_percent = CSH.UniformFloatHyperparameter("fd_percent", lower=0, upper=18)
-    solvent = CSH.CategoricalHyperparameter("solvent", choices=["cyclohexane", "CHCl3", "toluene"])
-    concentration = CSH.UniformFloatHyperparameter("concentration", lower=5, upper=30)
-    thickness = CSH.UniformFloatHyperparameter("thickness", lower=25, upper=150)
+    concentration = CSH.UniformFloatHyperparameter("concentration", lower=5, upper=42)
+    solvent = CSH.CategoricalHyperparameter("chemical_1", choices=["A", "B", "C"])
+    thickness = CSH.UniformFloatHyperparameter("chemical_2_percent", lower=0, upper=100)
     cs.add_hyperparameters([
         starting_material_ID,
         fd_percent,
@@ -73,7 +74,7 @@ if __name__ == '__main__':
         thickness
     ])
 
-    values, configs = readData(cs, "data.csv")
+    values, configs = readData(cs, "hydrogen_new_3.csv")
 
     scenario = Scenario({"run_obj": "quality",
                          "runcount-limit": len(values) + 1,
@@ -86,7 +87,7 @@ if __name__ == '__main__':
                         rng=np.random.RandomState(random.randint(0, 1000000)),
                         tae_runner=optFunc(values),
                         # acquisition_function=EI,
-                        # acquisition_function_kwargs={'par': -0.5},
+                        acquisition_function_kwargs={'par': 0.5},
                         # runhistory2epm=RunHistory2EPM4LogCost,
                         initial_design=None,
                         initial_configurations=list(values.keys()),
@@ -105,9 +106,8 @@ if __name__ == '__main__':
     dataframe = pd.DataFrame(data, columns=[
         'starting_material_ID',
         'fd_percent',
-        'solvent',
         'concentration',
-        'thickness',
-        'flow'])
-    dataframe.to_csv("pred.csv")
+        'chemical_1',
+        'chemical_2_percent'])
+    dataframe.to_csv("pred_5.csv")
     print(results)
